@@ -22,9 +22,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -171,9 +171,9 @@ private fun GlassTabBar(
     modifier: Modifier = Modifier
 ) {
     val items = listOf(
-        Icons.Filled.Apps to "空间",
-        Icons.Filled.Security to "防护",
-        Icons.Filled.Settings to "设置"
+        Icons.Rounded.Apps to "空间",
+        Icons.Rounded.Security to "防护",
+        Icons.Rounded.Settings to "设置"
     )
     Box(
         modifier

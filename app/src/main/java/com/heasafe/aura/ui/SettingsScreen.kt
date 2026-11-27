@@ -16,11 +16,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.List
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,7 +60,7 @@ fun SettingsScreen(
 
         SectionLabel("隐私与安全")
         Group {
-            ToggleRow("仅 HTTPS", "拦截明文 http 请求，强制加密连接", settings.strictHttps, { viewModel.setSetting(SettingsKeys.STRICT_HTTPS, it) }, Icons.Filled.Security)
+            ToggleRow("仅 HTTPS", "拦截明文 http 请求，强制加密连接", settings.strictHttps, { viewModel.setSetting(SettingsKeys.STRICT_HTTPS, it) }, Icons.Rounded.Security)
             Divider()
             ToggleRow("防指纹跟踪", "收敛硬件/Canvas/WebGL 指纹，降低可识别性", settings.antiFingerprint, { viewModel.setSetting(SettingsKeys.ANTI_FP, it) })
         }
@@ -68,7 +68,7 @@ fun SettingsScreen(
         Spacer(Modifier.height(28.dp))
         SectionLabel("视觉与浏览")
         Group {
-            ToggleRow("画质增强", "提升对比度、饱和度与清晰度", settings.enhance, { viewModel.setSetting(SettingsKeys.ENHANCE, it) }, Icons.Filled.AutoAwesome)
+            ToggleRow("画质增强", "提升对比度、饱和度与清晰度", settings.enhance, { viewModel.setSetting(SettingsKeys.ENHANCE, it) }, Icons.Rounded.AutoAwesome)
             Divider()
             ToggleRow("自动隐藏工具栏", "向下滚动时收起顶部工具层，向上滚动恢复", settings.autoHideChrome, { viewModel.setSetting(SettingsKeys.AUTO_HIDE, it) })
         }
@@ -76,9 +76,9 @@ fun SettingsScreen(
         Spacer(Modifier.height(28.dp))
         SectionLabel("通用")
         Group {
-            ActionRow("检查更新", "当前版本 ${BuildConfig.VERSION_NAME}", Icons.Filled.Refresh) { viewModel.checkUpdate(manual = true) }
+            ActionRow("检查更新", "当前版本 ${BuildConfig.VERSION_NAME}", Icons.Rounded.Refresh) { viewModel.checkUpdate(manual = true) }
             Divider()
-            ActionRow("查看日志", "安全拦截与防护事件记录", Icons.Filled.List, onOpenLogs)
+            ActionRow("查看日志", "安全拦截与防护事件记录", Icons.Rounded.List, onOpenLogs)
         }
 
         Spacer(Modifier.height(28.dp))
@@ -128,7 +128,7 @@ private fun ActionRow(title: String, subtitle: String, icon: ImageVector, onClic
             Text(title, fontWeight = FontWeight.Medium, fontSize = 15.sp)
             Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
     }
 }
 

@@ -17,9 +17,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.List
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -61,7 +61,7 @@ fun ProtectionScreen(viewModel: AuraViewModel, onOpenLogs: () -> Unit, modifier:
                 Modifier.size(40.dp).clip(CircleShape).background(AuraGreen.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Check, null, tint = AuraGreen, modifier = Modifier.size(22.dp))
+                Icon(Icons.Rounded.Check, null, tint = AuraGreen, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -80,10 +80,10 @@ fun ProtectionScreen(viewModel: AuraViewModel, onOpenLogs: () -> Unit, modifier:
                 .padding(horizontal = 16.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Filled.List, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Icon(Icons.Rounded.List, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(12.dp))
             Text("查看完整日志", fontWeight = FontWeight.Medium, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         }
 
         Spacer(Modifier.height(28.dp))

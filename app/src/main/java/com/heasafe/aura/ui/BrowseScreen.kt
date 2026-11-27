@@ -29,14 +29,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VideoSettings
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.VideoSettings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -184,7 +184,7 @@ fun BrowseScreen(
                 .padding(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 20.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                GlassCircleButton(icon = Icons.AutoMirrored.Filled.ArrowBack) { onClose() }
+                GlassCircleButton(icon = Icons.AutoMirrored.Rounded.ArrowBack) { onClose() }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(siteTitle, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
@@ -193,13 +193,13 @@ fun BrowseScreen(
                         fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1
                     )
                 }
-                GlassCircleButton(icon = Icons.Filled.Security, tint = AuraGreen) { showSecurityPanel = true }
+                GlassCircleButton(icon = Icons.Rounded.Security, tint = AuraGreen) { showSecurityPanel = true }
                 Spacer(Modifier.width(6.dp))
-                GlassCircleButton(icon = Icons.Filled.AutoAwesome, tint = if (enhancement.enabled) AuraBlue else MaterialTheme.colorScheme.onSurfaceVariant) {
+                GlassCircleButton(icon = Icons.Rounded.AutoAwesome, tint = if (enhancement.enabled) AuraBlue else MaterialTheme.colorScheme.onSurfaceVariant) {
                     showEnhancePanel = !showEnhancePanel
                 }
                 Spacer(Modifier.width(6.dp))
-                GlassCircleButton(icon = Icons.Filled.KeyboardArrowUp) { chromeVisible = false }
+                GlassCircleButton(icon = Icons.Rounded.KeyboardArrowUp) { chromeVisible = false }
             }
             Spacer(Modifier.height(10.dp))
             // 视频模式切换
@@ -233,7 +233,7 @@ fun BrowseScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Filled.VideoSettings, contentDescription = null,
+                        Icons.Rounded.VideoSettings, contentDescription = null,
                         tint = com.heasafe.aura.ui.theme.AuraBlue, modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(8.dp))
@@ -251,7 +251,7 @@ fun BrowseScreen(
             modifier = Modifier.align(Alignment.TopEnd)
         ) {
             Box(Modifier.padding(end = 12.dp, top = 12.dp)) {
-                GlassCircleButton(icon = Icons.Filled.KeyboardArrowDown) { chromeVisible = true }
+                GlassCircleButton(icon = Icons.Rounded.KeyboardArrowDown) { chromeVisible = true }
             }
         }
 
@@ -331,7 +331,7 @@ private fun BoxScope.BlockedToast(reason: String, onDismiss: () -> Unit) {
             .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Filled.Security, null, tint = Color.White, modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.Security, null, tint = Color.White, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(10.dp))
         Text(reason, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
@@ -350,11 +350,11 @@ private fun EnhancePanel(
             .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.AutoAwesome, null, tint = AuraBlue)
+            Icon(Icons.Rounded.AutoAwesome, null, tint = AuraBlue)
             Spacer(Modifier.width(10.dp))
             Text("画质增强", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, null) }
+            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, null) }
         }
         Spacer(Modifier.height(8.dp))
         Text(
@@ -396,11 +396,11 @@ private fun SecurityPanel(
                 .padding(20.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Security, null, tint = AuraGreen)
+                Icon(Icons.Rounded.Security, null, tint = AuraGreen)
                 Spacer(Modifier.width(10.dp))
                 Text("安全防护", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = onClose) { Icon(Icons.Filled.Close, null) }
+                IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, null) }
             }
             Spacer(Modifier.height(8.dp))
             Text("本次会话已拦截 ${events.size} 次风险", style = MaterialTheme.typography.bodyMedium)

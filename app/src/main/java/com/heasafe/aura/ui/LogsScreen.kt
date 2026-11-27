@@ -17,8 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,11 +59,11 @@ fun LogsScreen(viewModel: AuraViewModel, onBack: () -> Unit, modifier: Modifier 
             Modifier.fillMaxWidth().padding(start = 8.dp, top = 16.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回") }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回") }
             Text("日志", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { viewModel.clearLogs() }) {
-                Icon(Icons.Filled.DeleteSweep, contentDescription = "清空日志", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.Rounded.DeleteSweep, contentDescription = "清空日志", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 

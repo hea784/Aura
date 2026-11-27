@@ -31,11 +31,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -135,9 +135,9 @@ fun LibraryScreen(
                 .padding(end = 20.dp, bottom = 108.dp),
             containerColor = AuraBlue,
             contentColor = Color.White,
-            shape = RoundedCornerShape(18.dp)
+            shape = CircleShape
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "添加网站", modifier = Modifier.size(26.dp))
+            Icon(Icons.Rounded.Add, contentDescription = "添加网站", modifier = Modifier.size(26.dp))
         }
 
         if (showAddDialog) {
@@ -268,7 +268,7 @@ private fun SiteRow(
             }
             IconButton(onClick = onFavorite, modifier = Modifier.size(38.dp)) {
                 Icon(
-                    Icons.Filled.Favorite,
+                    Icons.Rounded.Favorite,
                     contentDescription = "收藏",
                     tint = if (site.favorite) Color(0xFFFF3B30)
                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
@@ -276,9 +276,9 @@ private fun SiteRow(
                 )
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(38.dp)) {
-                Icon(Icons.Filled.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                Icon(Icons.Rounded.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
-            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         }
 
         AnimatedVisibility(
@@ -318,7 +318,7 @@ private fun EmptyState(onAdd: () -> Unit) {
                 .background(AuraGreen.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Filled.Link, null, tint = AuraGreen, modifier = Modifier.size(24.dp))
+            Icon(Icons.Rounded.Link, null, tint = AuraGreen, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.height(14.dp))
         Text("还没有网站", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -349,7 +349,7 @@ private fun AddSiteDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
                     placeholder = { Text("example.com") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    leadingIcon = { Icon(Icons.Filled.Link, null) },
+                    leadingIcon = { Icon(Icons.Rounded.Link, null) },
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
