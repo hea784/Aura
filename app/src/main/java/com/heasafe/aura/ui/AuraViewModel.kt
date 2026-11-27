@@ -58,6 +58,12 @@ class AuraViewModel(app: Application) : AndroidViewModel(app) {
         settingsStore.set(key, value)
     }
 
+    /** 按站放行广告/跟踪（修复站点破版）。 */
+    fun setSiteAdsAllowed(host: String, allow: Boolean) = viewModelScope.launch {
+        settingsStore.setAllowedHost(host, allow)
+        _message.value = if (allow) "已为本站放行广告" else "已恢复本站广告拦截"
+    }
+
     /** 检查 GitHub Release 更新；manual=true 时无更新也给出反馈。 */
     fun checkUpdate(manual: Boolean = false) = viewModelScope.launch {
         val info = UpdateChecker.check(BuildConfig.VERSION_NAME)

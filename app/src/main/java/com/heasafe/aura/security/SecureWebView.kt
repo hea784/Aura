@@ -20,6 +20,7 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.heasafe.aura.core.MainThread
+import org.json.JSONObject
 import java.io.ByteArrayInputStream
 
 /**
@@ -36,7 +37,9 @@ class SecureWebView(
     private val onPageFinished: (String) -> Unit = {},
     private val onMessage: (String) -> Unit = {},
     private val onScroll: (scrollY: Int, oldScrollY: Int) -> Unit = { _, _ -> },
-    private val strictHttps: Boolean = false
+    private val strictHttps: Boolean = false,
+    private val isHostAllowed: (String) -> Boolean = { false },
+    private val onTrackerBlocked: (String) -> Unit = {}
 ) {
 
     val webView: WebView = WebView(context).apply {
@@ -51,6 +54,7 @@ class SecureWebView(
     init {
         TrackerBlocklist.load(context)
         applyHardening()
+        registerCosmetic()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -96,15 +100,22 @@ class SecureWebView(
 
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 val url = request?.url?.toString() ?: return null
-                // 子资源与主文档同一闸门：scheme/本地/私有/同形字 + 维护型拦截名单（防 SSRF/跟踪）
+                val host = runCatching { java.net.URI(url).host }.getOrNull()
+                // 按站放行：用户在本站关闭拦截时，跳过规则（仍保留 scheme/本地地址硬闸门）
+                val siteAllowed = host != null && isHostAllowed(host.lowercase())
                 val verdict = UrlGuard.validate(url)
-                val tracker = TrackerBlocklist.shouldBlock(url)
-                if (verdict is UrlGuard.Result.Rejected || tracker != null) {
+                if (verdict is UrlGuard.Result.Rejected) {
                     MainThread.run(mainHandler) {
-                        if (verdict is UrlGuard.Result.Rejected) {
-                            securityLog.add(SecurityLog.Event.Type.BLOCKED_URL, "拦截子资源: ${verdict.reason}")
-                        }
-                        tracker?.let { securityLog.add(SecurityLog.Event.Type.TRACKER, "拦截跟踪: $it") }
+                        securityLog.add(SecurityLog.Event.Type.BLOCKED_URL, "拦截子资源: ${verdict.reason}")
+                    }
+                    return emptyResponse()
+                }
+                if (siteAllowed) return null
+                val tracker = TrackerBlocklist.shouldBlock(url)
+                if (tracker != null) {
+                    MainThread.run(mainHandler) {
+                        securityLog.add(SecurityLog.Event.Type.TRACKER, "拦截跟踪/广告: $tracker")
+                        onTrackerBlocked(tracker)
                     }
                     return emptyResponse()
                 }
@@ -115,6 +126,7 @@ class SecureWebView(
                 super.onPageFinished(view, url)
                 url?.let { onPageFinished(it) }
                 injectVideoProbe() // 页面就绪后探测站内视频，供自动模式判断
+                injectCosmeticFallback() // 不支持 document-start 时补注入 cosmetic
             }
 
             override fun onReceivedError(
@@ -320,6 +332,41 @@ class SecureWebView(
             }
         }
     }
+
+    private var cosmeticRegistered = false
+
+    /** 注册 cosmetic CSS（document-start 优先，避免广告位闪现）。 */
+    private fun registerCosmetic() {
+        MainThread.run(mainHandler) {
+            try {
+                val css = TrackerBlocklist.cosmeticCss()
+                if (css.isEmpty()) return@run
+                val script = cosmeticScript(css)
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                    WebViewCompat.addDocumentStartJavaScript(webView, script, setOf("*"))
+                    cosmeticRegistered = true
+                }
+            } catch (e: Exception) {
+                securityLog.add(SecurityLog.Event.Type.OTHER, "cosmetic 注入失败: ${e.message}")
+            }
+        }
+    }
+
+    /** 不支持 document-start 时，页面完成后注入 cosmetic CSS。 */
+    private fun injectCosmeticFallback() {
+        if (cosmeticRegistered) return
+        MainThread.run(mainHandler) {
+            try {
+                val css = TrackerBlocklist.cosmeticCss()
+                if (css.isNotEmpty()) webView.evaluateJavascript(cosmeticScript(css), null)
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun cosmeticScript(css: String): String =
+        "(function(){var s=document.getElementById('aura-cosmetic');if(!s){s=document.createElement('style');" +
+            "s.id='aura-cosmetic';(document.head||document.documentElement).appendChild(s);}" +
+            "s.textContent=${JSONObject.quote(css)};})();"
 
     /** 短视频模式：注入滚动吸附与沉浸式样式（竖向 feed 观感）。 */
     fun enableShortVideoMode() {

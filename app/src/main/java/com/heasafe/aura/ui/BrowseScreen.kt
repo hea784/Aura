@@ -91,8 +91,14 @@ fun BrowseScreen(
     var videoScanResult by remember { mutableStateOf<String?>(null) } // 探测到的视频摘要
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     var chromeVisible by remember { mutableStateOf(true) } // 顶部工具层可见性
+    var blockedCount by remember { mutableStateOf(0) } // 本页已拦截广告/跟踪数
+    val currentHost = remember(url) {
+        runCatching { java.net.URI(url).host?.lowercase() }.getOrNull() ?: url
+    }
 
-    val secureWebView = remember(settings.strictHttps, settings.antiFingerprint, settings.autoHideChrome) {
+    val secureWebView = remember(
+        settings.strictHttps, settings.antiFingerprint, settings.autoHideChrome, settings.allowedHosts
+    ) {
         SecureWebView(
             context = context,
             securityLog = viewModel.securityLog,
@@ -106,6 +112,8 @@ fun BrowseScreen(
                 }
             },
             strictHttps = settings.strictHttps,
+            isHostAllowed = { host -> settings.allowedHosts.contains(host) },
+            onTrackerBlocked = { blockedCount++ },
             onMessage = { raw ->
                 // 解析 AuraBridge 回传的视频探测结果，仅读取元数据
                 try {
@@ -295,6 +303,10 @@ fun BrowseScreen(
             Box(Modifier.blur(securityBlur.dp)) {
                 SecurityPanel(
                     events = viewModel.securityLog.snapshot(),
+                    blockedCount = blockedCount,
+                    host = currentHost,
+                    adsAllowed = settings.allowedHosts.contains(currentHost),
+                    onToggleSiteAds = { allow -> viewModel.setSiteAdsAllowed(currentHost, allow) },
                     onClose = { showSecurityPanel = false }
                 )
             }
@@ -379,6 +391,10 @@ private fun EnhancePanel(
 @Composable
 private fun SecurityPanel(
     events: List<com.heasafe.aura.security.SecurityLog.Event>,
+    blockedCount: Int,
+    host: String,
+    adsAllowed: Boolean,
+    onToggleSiteAds: (Boolean) -> Unit,
     onClose: () -> Unit
 ) {
     Box(
@@ -403,7 +419,26 @@ private fun SecurityPanel(
                 IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, null) }
             }
             Spacer(Modifier.height(8.dp))
-            Text("本次会话已拦截 ${events.size} 次风险", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "本页已拦截 $blockedCount 条广告/跟踪 · 会话事件 ${events.size} 条",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(Modifier.height(10.dp))
+            // 按站放行（修复站点破版）
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                    .clickable { onToggleSiteAds(!adsAllowed) }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (adsAllowed) "本站已放行广告（点按恢复拦截）" else "为 $host 放行广告（修复破版）",
+                    fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f)
+                )
+            }
             Spacer(Modifier.height(12.dp))
             Column(Modifier.verticalScroll(rememberScrollState()).height(260.dp)) {
                 events.take(40).forEach { event ->

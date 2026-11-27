@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,7 +17,8 @@ data class AppSettings(
     val autoHideChrome: Boolean = true,
     val antiFingerprint: Boolean = true,
     val strictHttps: Boolean = false,
-    val enhance: Boolean = true
+    val enhance: Boolean = true,
+    val allowedHosts: Set<String> = emptySet()
 )
 
 object SettingsKeys {
@@ -24,6 +26,7 @@ object SettingsKeys {
     val ANTI_FP = booleanPreferencesKey("anti_fingerprint")
     val STRICT_HTTPS = booleanPreferencesKey("strict_https")
     val ENHANCE = booleanPreferencesKey("enhance")
+    val ALLOWED_HOSTS = stringSetPreferencesKey("allowed_hosts")
 }
 
 class SettingsStore(private val context: Context) {
@@ -32,11 +35,20 @@ class SettingsStore(private val context: Context) {
             autoHideChrome = p[SettingsKeys.AUTO_HIDE] ?: true,
             antiFingerprint = p[SettingsKeys.ANTI_FP] ?: true,
             strictHttps = p[SettingsKeys.STRICT_HTTPS] ?: false,
-            enhance = p[SettingsKeys.ENHANCE] ?: true
+            enhance = p[SettingsKeys.ENHANCE] ?: true,
+            allowedHosts = p[SettingsKeys.ALLOWED_HOSTS] ?: emptySet()
         )
     }
 
     suspend fun set(key: Preferences.Key<Boolean>, value: Boolean) {
         context.settingsDataStore.edit { it[key] = value }
+    }
+
+    suspend fun setAllowedHost(host: String, allow: Boolean) {
+        context.settingsDataStore.edit { prefs ->
+            val current = prefs[SettingsKeys.ALLOWED_HOSTS]?.toMutableSet() ?: mutableSetOf()
+            if (allow) current.add(host.lowercase()) else current.remove(host.lowercase())
+            prefs[SettingsKeys.ALLOWED_HOSTS] = current
+        }
     }
 }
