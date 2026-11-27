@@ -87,6 +87,40 @@ class UrlGuardTest {
         assertFalse(UrlGuard.isBlockedHost("example.com"))
     }
 
+    @Test
+    fun rejectsHexIntegerOctalShortIpLiterals() {
+        listOf(
+            "http://0x7f000001/",
+            "http://0x7f.0.0.1/",
+            "http://2130706433/",
+            "http://127.1/",
+            "http://0177.0.0.1/",
+            "http://0xA9FEA9FE/"
+        ).forEach { url ->
+            assertTrue("$url should be rejected", UrlGuard.validate(url) is UrlGuard.Result.Rejected)
+        }
+    }
+
+    @Test
+    fun rejectsWholeScriptHomograph() {
+        val result = UrlGuard.validate("https://\\u0430\\u0440\\u0440\\u04CF\\u0435.com")
+        assertTrue(result is UrlGuard.Result.Rejected)
+    }
+
+    @Test
+    fun allowsStandardDottedDecimalPublic() {
+        assertTrue(UrlGuard.validate("https://8.8.8.8") is UrlGuard.Result.Allowed)
+        // 非 ASCII unicode IDN 输入保守拒绝（安全默认）；punycode 形式放行
+        assertTrue(UrlGuard.validate("https://xn--fsqu00a.xn--0zwm56d") is UrlGuard.Result.Allowed)
+    }
+
+    @Test
+    fun allowedUrlIsNormalizedSameAsValidated() {
+        val r = UrlGuard.validate("HTTPS://WWW.Example.COM/Path") as UrlGuard.Result.Allowed
+        assertEquals("https://www.example.com/Path", r.url)
+        assertEquals("www.example.com", r.host)
+    }
+
     private fun assertEquals(expected: String, actual: String) {
         org.junit.Assert.assertEquals(expected, actual)
     }

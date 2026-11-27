@@ -90,8 +90,7 @@ fun AuraApp(viewModel: AuraViewModel) {
         }
     }
 
-    // 启动时静默检查更新
-    LaunchedEffect(Unit) { viewModel.checkUpdate(manual = false) }
+    // 更新检查仅手动触发（设置页），避免启动即自动联网拉取的可疑 downloader 行为
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -153,10 +152,11 @@ fun AuraApp(viewModel: AuraViewModel) {
             confirmButton = {
                 TextButton(onClick = {
                     try {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkUrl ?: info.pageUrl)))
+                        // 只打开 HTTPS 发布页（网页），不直接跳转 .apk 下载，降低 downloader 启发式误报
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.pageUrl)))
                     } catch (_: Exception) { }
                     viewModel.consumeUpdate()
-                }) { Text("下载更新") }
+                }) { Text("前往发布页") }
             },
             dismissButton = { TextButton(onClick = { viewModel.consumeUpdate() }) { Text("稍后") } }
         )

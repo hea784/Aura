@@ -49,6 +49,7 @@ class SecureWebView(
     private var currentHost: String = ""
 
     init {
+        TrackerBlocklist.load(context)
         applyHardening()
     }
 
@@ -95,21 +96,18 @@ class SecureWebView(
 
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 val url = request?.url?.toString() ?: return null
-                MainThread.run(mainHandler) {
-                    when (val result = UrlGuard.validate(url)) {
-                        is UrlGuard.Result.Rejected -> {
-                            securityLog.add(SecurityLog.Event.Type.BLOCKED_URL, "拦截子资源: ${result.reason}")
+                // 子资源与主文档同一闸门：scheme/本地/私有/同形字 + 维护型拦截名单（防 SSRF/跟踪）
+                val verdict = UrlGuard.validate(url)
+                val tracker = TrackerBlocklist.shouldBlock(url)
+                if (verdict is UrlGuard.Result.Rejected || tracker != null) {
+                    MainThread.run(mainHandler) {
+                        if (verdict is UrlGuard.Result.Rejected) {
+                            securityLog.add(SecurityLog.Event.Type.BLOCKED_URL, "拦截子资源: ${verdict.reason}")
                         }
-                        is UrlGuard.Result.Allowed -> {
-                            TrackerBlocklist.shouldBlock(url)?.let { host ->
-                                securityLog.add(SecurityLog.Event.Type.TRACKER, "拦截跟踪: $host")
-                            }
-                        }
+                        tracker?.let { securityLog.add(SecurityLog.Event.Type.TRACKER, "拦截跟踪: $it") }
                     }
+                    return emptyResponse()
                 }
-                TrackerBlocklist.shouldBlock(url)?.let { return emptyResponse() }
-                if (UrlGuard.validate(url) is UrlGuard.Result.Rejected) return emptyResponse()
-                // 子资源不做 host 本地拦截（站点可能引用相对资源），但主文档必须过闸门
                 return null
             }
 

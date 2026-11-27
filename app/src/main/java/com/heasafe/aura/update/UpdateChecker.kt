@@ -47,9 +47,27 @@ object UpdateChecker {
             UpdateInfo(
                 version = tag,
                 notes = obj.optString("body", "").take(600),
-                pageUrl = obj.optString("html_url", "https://github.com/hea784/Aura/releases"),
-                apkUrl = apk
+                pageUrl = safeUrl(obj.optString("html_url", "")) ?: FALLBACK_PAGE,
+                apkUrl = safeUrl(apk ?: "")
             )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private const val FALLBACK_PAGE = "https://github.com/hea784/Aura/releases"
+    private val ALLOWED_HOSTS = setOf(
+        "github.com", "objects.githubusercontent.com", "raw.githubusercontent.com"
+    )
+
+    /** 更新跳转 URL 强制 https + host 白名单，防恶意 release/中间人导向任意 URI。 */
+    private fun safeUrl(url: String): String? {
+        if (url.isBlank()) return null
+        return try {
+            val u = java.net.URI(url)
+            if (u.scheme != "https") return null
+            val host = u.host?.lowercase() ?: return null
+            if (host in ALLOWED_HOSTS) url else null
         } catch (_: Exception) {
             null
         }

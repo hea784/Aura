@@ -46,9 +46,19 @@ object LogProvider {
     private var instance: LogDatabase? = null
 
     fun get(context: Context): LogDatabase = instance ?: synchronized(this) {
-        instance ?: Room.databaseBuilder(
-            context.applicationContext, LogDatabase::class.java, "aura_logs.db"
-        ).build().also { instance = it }
+        instance ?: build(context.applicationContext).also { instance = it }
+    }
+
+    private fun build(context: Context): LogDatabase {
+        System.loadLibrary("sqlcipher")
+        val factory = net.zetetic.database.sqlcipher.SupportOpenHelperFactory(
+            com.heasafe.aura.security.DbKeyStore.passphrase(context)
+        )
+        // 旧明文日志库不迁移（日志非关键），直接删除改用加密库
+        context.getDatabasePath("aura_logs.db").delete()
+        return Room.databaseBuilder(context, LogDatabase::class.java, "aura_logs_enc.db")
+            .openHelperFactory(factory)
+            .build()
     }
 }
 
