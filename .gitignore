@@ -6,3 +6,5 @@ app/build/
 *.iml
 .DS_Store
 .mimosa/
+keystore/
+signing.properties
