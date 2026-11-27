@@ -1,6 +1,7 @@
 package com.heasafe.aura.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,7 +34,7 @@ import com.heasafe.aura.ui.theme.AuraGreen
 
 /** 防护页 — iOS 分组列表：大标题 + 状态摘要 + 防护项列表。 */
 @Composable
-fun ProtectionScreen(viewModel: AuraViewModel, modifier: Modifier = Modifier) {
+fun ProtectionScreen(viewModel: AuraViewModel, onOpenLogs: () -> Unit, modifier: Modifier = Modifier) {
     val events = viewModel.securityLog.snapshot()
 
     Column(
@@ -65,6 +68,22 @@ fun ProtectionScreen(viewModel: AuraViewModel, modifier: Modifier = Modifier) {
                 Text("全部防护已开启", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 Text("本次会话拦截 ${events.size} 次风险", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .clickable(onClick = onOpenLogs)
+                .padding(horizontal = 16.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Filled.List, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Text("查看完整日志", fontWeight = FontWeight.Medium, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         }
 
         Spacer(Modifier.height(28.dp))

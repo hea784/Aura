@@ -1,5 +1,7 @@
 package com.heasafe.aura.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,12 +25,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,10 +44,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.heasafe.aura.ui.components.liquidGlass
 import com.heasafe.aura.ui.theme.AuraTheme
 import com.heasafe.aura.ui.theme.AuraBlue
 import com.heasafe.aura.ui.theme.AuraGreen
@@ -66,9 +72,12 @@ fun AuraApp(viewModel: AuraViewModel) {
     val sites by viewModel.sites.collectAsStateWithLifecycle(initialValue = emptyList())
     val activeSite by viewModel.activeSite.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val update by viewModel.update.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     var tab by remember { mutableStateOf(0) } // 0=空间 1=防护 2=设置
+    var showLogs by remember { mutableStateOf(false) }
 
     LaunchedEffect(message) {
         message?.let {
@@ -77,12 +86,16 @@ fun AuraApp(viewModel: AuraViewModel) {
         }
     }
 
+    // 启动时静默检查更新
+    LaunchedEffect(Unit) { viewModel.checkUpdate(manual = false) }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
+                showLogs -> LogsScreen(viewModel = viewModel, onBack = { showLogs = false })
                 activeSite != null -> {
                     val site = activeSite!!
                     BrowseScreen(
@@ -98,12 +111,12 @@ fun AuraApp(viewModel: AuraViewModel) {
                     viewModel = viewModel,
                     onOpen = { viewModel.openSite(it) }
                 )
-                tab == 1 -> ProtectionScreen(viewModel = viewModel)
-                else -> SettingsScreen()
+                tab == 1 -> ProtectionScreen(viewModel = viewModel, onOpenLogs = { showLogs = true })
+                else -> SettingsScreen(viewModel = viewModel, onOpenLogs = { showLogs = true })
             }
 
-            // 底部 Tab Bar（仅在非浏览页显示）
-            if (activeSite == null) {
+            // 底部 Tab Bar（仅在非浏览页/非日志页显示）
+            if (activeSite == null && !showLogs) {
                 GlassTabBar(
                     current = tab,
                     onTab = { tab = it },
@@ -113,6 +126,32 @@ fun AuraApp(viewModel: AuraViewModel) {
                 )
             }
         }
+    }
+
+    // 更新提示弹窗
+    update?.let { info ->
+        AlertDialog(
+            onDismissRequest = { viewModel.consumeUpdate() },
+            title = { Text("发现新版本 ${info.version}", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        info.notes.ifBlank { "包含改进与修复。" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkUrl ?: info.pageUrl)))
+                    } catch (_: Exception) { }
+                    viewModel.consumeUpdate()
+                }) { Text("下载更新") }
+            },
+            dismissButton = { TextButton(onClick = { viewModel.consumeUpdate() }) { Text("稍后") } }
+        )
     }
 }
 
@@ -131,8 +170,7 @@ private fun GlassTabBar(
         modifier
             .fillMaxWidth()
             .height(64.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.86f))
+            .liquidGlass(RoundedCornerShape(22.dp))
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),

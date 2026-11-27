@@ -4,6 +4,9 @@ import android.view.ViewGroup
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -29,6 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoSettings
@@ -38,12 +43,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -51,9 +58,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heasafe.aura.core.VisualEnhancement
 import com.heasafe.aura.security.SecureWebView
 import com.heasafe.aura.ui.components.SegmentedControl
+import com.heasafe.aura.ui.components.liquidGlass
+import com.heasafe.aura.ui.components.liquidChromeEnter
+import com.heasafe.aura.ui.components.liquidChromeExit
+import com.heasafe.aura.ui.components.liquidMenuEnter
+import com.heasafe.aura.ui.components.liquidMenuExit
+import com.heasafe.aura.ui.components.rememberFlightBlur
+import com.heasafe.aura.ui.components.rememberReduceMotion
 import com.heasafe.aura.ui.theme.AuraBlue
 import com.heasafe.aura.ui.theme.AuraGreen
 
@@ -74,13 +89,23 @@ fun BrowseScreen(
     var showSecurityPanel by remember { mutableStateOf(false) }
     var blockedReason by remember { mutableStateOf<String?>(null) }
     var videoScanResult by remember { mutableStateOf<String?>(null) } // 探测到的视频摘要
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    var chromeVisible by remember { mutableStateOf(true) } // 顶部工具层可见性
 
-    val secureWebView = remember {
+    val secureWebView = remember(settings.strictHttps, settings.antiFingerprint, settings.autoHideChrome) {
         SecureWebView(
             context = context,
             securityLog = viewModel.securityLog,
             onBlocked = { reason -> blockedReason = reason },
             onPageFinished = { },
+            onScroll = { y, old ->
+                // 向下滚动收起工具层，向上滚动恢复（可设置关闭）
+                if (settings.autoHideChrome) {
+                    if (y > old + 24) chromeVisible = false
+                    else if (y < old - 24) chromeVisible = true
+                }
+            },
+            strictHttps = settings.strictHttps,
             onMessage = { raw ->
                 // 解析 AuraBridge 回传的视频探测结果，仅读取元数据
                 try {
@@ -111,10 +136,17 @@ fun BrowseScreen(
     DisposableEffect(secureWebView) {
         secureWebView.load(url)
         if (effectiveShort) secureWebView.enableShortVideoMode()
-        secureWebView.applyVisualEnhancement(
-            enhancement.contrast, enhancement.saturate, enhancement.brightness
-        )
+        if (settings.antiFingerprint) secureWebView.injectAntiFingerprint()
         onDispose { secureWebView.purge() }
+    }
+
+    // 画质增强开关：仅应用/清除滤镜，不重载页面
+    LaunchedEffect(settings.enhance, enhancement) {
+        if (settings.enhance) {
+            secureWebView.applyVisualEnhancement(enhancement.contrast, enhancement.saturate, enhancement.brightness)
+        } else {
+            secureWebView.clearVisualEnhancement()
+        }
     }
 
     Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -128,11 +160,19 @@ fun BrowseScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // 顶部玻璃工具栏（悬浮）
+        // 顶部玻璃工具栏（悬浮，可隐藏：滚动自动收起 + 手动开关，液态玻璃弹簧动效）
+        val reduceMotion = rememberReduceMotion()
+        val chromeBlur = rememberFlightBlur(chromeVisible, reduceMotion)
+        AnimatedVisibility(
+            visible = chromeVisible,
+            enter = liquidChromeEnter(reduceMotion),
+            exit = liquidChromeExit(reduceMotion),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .align(Alignment.TopCenter)
+                .blur(chromeBlur.dp)
                 .background(
                     androidx.compose.ui.graphics.Brush.verticalGradient(
                         listOf(
@@ -158,6 +198,8 @@ fun BrowseScreen(
                 GlassCircleButton(icon = Icons.Filled.AutoAwesome, tint = if (enhancement.enabled) AuraBlue else MaterialTheme.colorScheme.onSurfaceVariant) {
                     showEnhancePanel = !showEnhancePanel
                 }
+                Spacer(Modifier.width(6.dp))
+                GlassCircleButton(icon = Icons.Filled.KeyboardArrowUp) { chromeVisible = false }
             }
             Spacer(Modifier.height(10.dp))
             // 视频模式切换
@@ -199,39 +241,63 @@ fun BrowseScreen(
                 }
             }
         }
+        }
+
+        // 收起后的悬浮展开把手（玻璃水珠锚点，点按恢复工具层）
+        AnimatedVisibility(
+            visible = !chromeVisible,
+            enter = fadeIn(tween(160)),
+            exit = fadeOut(tween(120)),
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            Box(Modifier.padding(end = 12.dp, top = 12.dp)) {
+                GlassCircleButton(icon = Icons.Filled.KeyboardArrowDown) { chromeVisible = true }
+            }
+        }
 
         // 拦截提示
         blockedReason?.let { reason ->
             BlockedToast(reason = reason, onDismiss = { blockedReason = null })
         }
 
-        // 画质增强面板
+        // 画质增强面板（液态玻璃：从工具栏水珠飞出形变，飞行模糊）
+        val enhanceBlur = rememberFlightBlur(showEnhancePanel, reduceMotion)
         AnimatedVisibility(
             visible = showEnhancePanel,
-            enter = slideInVertically { it },
-            exit = slideOutVertically { it },
+            enter = liquidMenuEnter(reduceMotion),
+            exit = liquidMenuExit(reduceMotion),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            EnhancePanel(
-                enhancement = enhancement,
-                onChange = { new ->
-                    enhancement = new
-                    if (new.enabled) {
-                        secureWebView.applyVisualEnhancement(new.contrast, new.saturate, new.brightness)
-                    } else {
-                        secureWebView.clearVisualEnhancement()
-                    }
-                },
-                onClose = { showEnhancePanel = false }
-            )
+            Box(Modifier.blur(enhanceBlur.dp)) {
+                EnhancePanel(
+                    enhancement = enhancement,
+                    onChange = { new ->
+                        enhancement = new
+                        if (new.enabled) {
+                            secureWebView.applyVisualEnhancement(new.contrast, new.saturate, new.brightness)
+                        } else {
+                            secureWebView.clearVisualEnhancement()
+                        }
+                    },
+                    onClose = { showEnhancePanel = false }
+                )
+            }
         }
 
-        // 安全面板
-        if (showSecurityPanel) {
-            SecurityPanel(
-                events = viewModel.securityLog.snapshot(),
-                onClose = { showSecurityPanel = false }
-            )
+        // 安全面板（液态玻璃菜单动效）
+        val securityBlur = rememberFlightBlur(showSecurityPanel, reduceMotion)
+        AnimatedVisibility(
+            visible = showSecurityPanel,
+            enter = liquidMenuEnter(reduceMotion),
+            exit = liquidMenuExit(reduceMotion),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Box(Modifier.blur(securityBlur.dp)) {
+                SecurityPanel(
+                    events = viewModel.securityLog.snapshot(),
+                    onClose = { showSecurityPanel = false }
+                )
+            }
         }
     }
 }
@@ -245,9 +311,7 @@ private fun GlassCircleButton(
     Box(
         Modifier
             .size(40.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+            .liquidGlass(CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -282,8 +346,7 @@ private fun EnhancePanel(
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .liquidGlass(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
             .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

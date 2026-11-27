@@ -17,7 +17,16 @@ object TrackerBlocklist {
         "mixpanel.com", "amplitude.com", "sentry.io", "bat.bing.com",
         "bing.com/click", "twitter.com/i/adsct", "t.co", "pixel.quantserve.com",
         "adsrvr.org", "adservice.google.com", "pagead2.googlesyndication.com",
-        "analytics.tiktok.com", "byteimg.com", "snapchat.com"
+        "analytics.tiktok.com", "byteimg.com", "snapchat.com",
+        // 扩充：常见广告/指纹/埋点域名
+        "cnzz.com", "umeng.com", "umengcloud.com", "growingio.com", "sensorsdata.cn",
+        "hm.baidu.com", "tongji.baidu.com", "pos.baidu.com", "cpro.baidu.com",
+        "ads.google.com", "adservice.google.cn", "doubleverify.com", "adsafeprotected.com",
+        "moatads.com", "chartbeat.com", "newrelic.com", "nr-data.net", "bugsnag.com",
+        "crashlytics.com", "app-measurement.com", "firebase-settings.crashlytics.com",
+        "branch.io", "appsflyer.com", "adjust.com", "kochava.com", "singular.net",
+        "taboola.com", "revcontent.com", "mgid.com", "popads.net", "popcash.net",
+        "exoclick.com", "juicyads.com", "trafficjunky.com", "adcash.com", "propellerads.com"
     )
 
     fun shouldBlock(url: String): String? {

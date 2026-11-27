@@ -34,7 +34,9 @@ class SecureWebView(
     private val securityLog: SecurityLog,
     private val onBlocked: (String) -> Unit = {},
     private val onPageFinished: (String) -> Unit = {},
-    private val onMessage: (String) -> Unit = {}
+    private val onMessage: (String) -> Unit = {},
+    private val onScroll: (scrollY: Int, oldScrollY: Int) -> Unit = { _, _ -> },
+    private val strictHttps: Boolean = false
 ) {
 
     val webView: WebView = WebView(context).apply {
@@ -52,6 +54,12 @@ class SecureWebView(
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun applyHardening() {
+        // 关闭 WebView 远程调试，避免 release 包被 adb/Chrome inspect 注入
+        WebView.setWebContentsDebuggingEnabled(false)
+        // 滚动回调：供 UI 自动隐藏顶部工具层
+        webView.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+            onScroll(scrollY, oldScrollY)
+        }
         webView.settings.apply {
             javaScriptEnabled = true // 现代站点必需；危险能力在下面逐项关闭
             domStorageEnabled = false
@@ -204,8 +212,15 @@ class SecureWebView(
                 true
             }
             is UrlGuard.Result.Allowed -> {
-                currentHost = result.host
-                false // 放行，由本 WebView 自己加载
+                if (strictHttps && result.url.startsWith("http://")) {
+                    val reason = "仅 HTTPS 模式已开启，拦截明文请求：${result.host}"
+                    securityLog.add(SecurityLog.Event.Type.BLOCKED_URL, reason)
+                    onBlocked(reason)
+                    true
+                } else {
+                    currentHost = result.host
+                    false // 放行，由本 WebView 自己加载
+                }
             }
         }
     }
@@ -241,6 +256,10 @@ class SecureWebView(
                     // 第二道闸门：再次校验 host，确保满足 http/https + 非本地/私有/保留地址
                     if (UrlGuard.isBlockedHost(result.host)) {
                         val reason = "出于安全考虑，禁止访问本地或内网地址：${result.host}"
+                        securityLog.add(SecurityLog.Event.Type.BLOCKED_URL, reason)
+                        onBlocked(reason)
+                    } else if (strictHttps && result.url.startsWith("http://")) {
+                        val reason = "仅 HTTPS 模式已开启，拦截明文地址：${result.host}"
                         securityLog.add(SecurityLog.Event.Type.BLOCKED_URL, reason)
                         onBlocked(reason)
                     } else {
@@ -283,6 +302,23 @@ class SecureWebView(
                 webView.evaluateJavascript(script, null)
             } catch (e: Exception) {
                 securityLog.add(SecurityLog.Event.Type.OTHER, "视频探测脚本加载失败: ${e.message}")
+            }
+        }
+    }
+
+    /** 防指纹：在文档开始前注入反跟踪脚本（不支持时回退页面完成后注入）。 */
+    fun injectAntiFingerprint() {
+        MainThread.run(mainHandler) {
+            try {
+                val script = webView.context.assets.open("anti_fingerprint.js")
+                    .bufferedReader().use { it.readText() }
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                    WebViewCompat.addDocumentStartJavaScript(webView, script, setOf("*"))
+                } else {
+                    webView.evaluateJavascript(script, null)
+                }
+            } catch (e: Exception) {
+                securityLog.add(SecurityLog.Event.Type.OTHER, "防指纹脚本加载失败: ${e.message}")
             }
         }
     }

@@ -12,9 +12,14 @@ class SecurityLog(private val capacity: Int = 300) {
     private val lock = Any()
     private val events = LinkedList<Event>()
 
+    /** 可选持久化 sink：由 ViewModel 接到 Logger，落盘跨会话日志。 */
+    var sink: ((Event) -> Unit)? = null
+
     fun add(type: Event.Type, detail: String) = synchronized(lock) {
-        events.addFirst(Event(System.currentTimeMillis(), type, detail))
+        val event = Event(System.currentTimeMillis(), type, detail)
+        events.addFirst(event)
         while (events.size > capacity) events.removeLast()
+        sink?.invoke(event)
     }
 
     fun snapshot(): List<Event> = synchronized(lock) { events.toList() }

@@ -43,6 +43,7 @@ object UrlGuard {
 
         val host = uri.host ?: return Result.Rejected("无法解析主机名")
         if (host.length > 253) return Result.Rejected("主机名过长")
+        if (isHomographHost(host)) return Result.Rejected("疑似同形字钓鱼域名（混合拉丁与西里尔/希腊字母）：$host")
 
         // IDN / punycode 归一化后统一做小写判定，防止大小写或同形字绕过
         val normalizedHost = try {
@@ -56,6 +57,17 @@ object UrlGuard {
         }
 
         return Result.Allowed(withScheme, normalizedHost)
+    }
+
+    /**
+     * 同形字钓鱼检测：主机名同时含拉丁字母与西里尔/希腊字母（视觉易混淆），
+     * 例如用西里尔 а 冒充拉丁 a。中文等 CJK + 拉丁属正常 IDN，不拦截。
+     */
+    fun isHomographHost(host: String): Boolean {
+        val lower = host.lowercase(Locale.ROOT)
+        val hasLatin = lower.any { it in 'a'..'z' }
+        val hasConfusable = lower.any { it in 'Ѐ'..'ӿ' || it in 'Ͱ'..'Ͽ' }
+        return hasLatin && hasConfusable
     }
 
     /**

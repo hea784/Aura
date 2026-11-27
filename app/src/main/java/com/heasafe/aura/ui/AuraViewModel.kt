@@ -1,15 +1,25 @@
 package com.heasafe.aura.ui
 
 import android.app.Application
+import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.heasafe.aura.BuildConfig
+import com.heasafe.aura.data.AppSettings
 import com.heasafe.aura.data.DatabaseProvider
+import com.heasafe.aura.data.LogProvider
+import com.heasafe.aura.data.Logger
 import com.heasafe.aura.data.SavedSite
+import com.heasafe.aura.data.SettingsStore
 import com.heasafe.aura.security.SecurityLog
 import com.heasafe.aura.security.UrlGuard
+import com.heasafe.aura.update.UpdateChecker
+import com.heasafe.aura.update.UpdateInfo
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class AuraViewModel(app: Application) : AndroidViewModel(app) {
@@ -17,13 +27,47 @@ class AuraViewModel(app: Application) : AndroidViewModel(app) {
     val sites = dao.all()
     val securityLog = SecurityLog()
 
+    private val settingsStore = SettingsStore(app)
+    val settings = settingsStore.flow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
+
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
     private val _activeSite = MutableStateFlow<SavedSite?>(null)
     val activeSite: StateFlow<SavedSite?> = _activeSite.asStateFlow()
 
+    private val _update = MutableStateFlow<UpdateInfo?>(null)
+    val update: StateFlow<UpdateInfo?> = _update.asStateFlow()
+
+    init {
+        // 安全事件同步落盘到持久化日志
+        securityLog.sink = { e -> Logger.add(app, e.type.name, e.detail) }
+    }
+
     fun consumeMessage() { _message.value = null }
+    fun consumeUpdate() { _update.value = null }
+
+    fun logs(limit: Int = 500) = LogProvider.get(getApplication()).logDao().recent(limit)
+
+    fun clearLogs() {
+        Logger.clear(getApplication())
+        _message.value = "日志已清空"
+    }
+
+    fun setSetting(key: Preferences.Key<Boolean>, value: Boolean) = viewModelScope.launch {
+        settingsStore.set(key, value)
+    }
+
+    /** 检查 GitHub Release 更新；manual=true 时无更新也给出反馈。 */
+    fun checkUpdate(manual: Boolean = false) = viewModelScope.launch {
+        val info = UpdateChecker.check(BuildConfig.VERSION_NAME)
+        Logger.add(
+            getApplication(), "UPDATE",
+            if (info != null) "发现新版本 ${info.version}" else "检查更新：已是最新或网络不可用"
+        )
+        if (info != null) _update.value = info
+        else if (manual) _message.value = "已是最新版本 ${BuildConfig.VERSION_NAME}"
+    }
 
     fun addSite(rawUrl: String, title: String? = null) {
         when (val result = UrlGuard.validate(rawUrl)) {
