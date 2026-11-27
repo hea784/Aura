@@ -49,6 +49,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.rememberHazeState
+import com.heasafe.aura.ui.components.hazeGlass
 import com.heasafe.aura.ui.components.liquidGlass
 import com.heasafe.aura.ui.theme.AuraTheme
 import com.heasafe.aura.ui.theme.AuraBlue
@@ -78,6 +81,7 @@ fun AuraApp(viewModel: AuraViewModel) {
 
     var tab by remember { mutableStateOf(0) } // 0=空间 1=防护 2=设置
     var showLogs by remember { mutableStateOf(false) }
+    val hazeState = rememberHazeState()
 
     LaunchedEffect(message) {
         message?.let {
@@ -94,32 +98,36 @@ fun AuraApp(viewModel: AuraViewModel) {
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            when {
-                showLogs -> LogsScreen(viewModel = viewModel, onBack = { showLogs = false })
-                activeSite != null -> {
-                    val site = activeSite!!
-                    BrowseScreen(
-                        url = site.url,
-                        siteTitle = site.title,
-                        initialMode = site.videoMode,
+            // 内容层作为 Haze 模糊源：功能层玻璃实时模糊其下方内容
+            Box(Modifier.fillMaxSize().haze(hazeState)) {
+                when {
+                    showLogs -> LogsScreen(viewModel = viewModel, onBack = { showLogs = false })
+                    activeSite != null -> {
+                        val site = activeSite!!
+                        BrowseScreen(
+                            url = site.url,
+                            siteTitle = site.title,
+                            initialMode = site.videoMode,
+                            viewModel = viewModel,
+                            onClose = { viewModel.closeSite() }
+                        )
+                    }
+                    tab == 0 -> LibraryScreen(
+                        sites = sites,
                         viewModel = viewModel,
-                        onClose = { viewModel.closeSite() }
+                        onOpen = { viewModel.openSite(it) }
                     )
+                    tab == 1 -> ProtectionScreen(viewModel = viewModel, onOpenLogs = { showLogs = true })
+                    else -> SettingsScreen(viewModel = viewModel, onOpenLogs = { showLogs = true })
                 }
-                tab == 0 -> LibraryScreen(
-                    sites = sites,
-                    viewModel = viewModel,
-                    onOpen = { viewModel.openSite(it) }
-                )
-                tab == 1 -> ProtectionScreen(viewModel = viewModel, onOpenLogs = { showLogs = true })
-                else -> SettingsScreen(viewModel = viewModel, onOpenLogs = { showLogs = true })
             }
 
-            // 底部 Tab Bar（仅在非浏览页/非日志页显示）
+            // 底部 Tab Bar（regular 液态玻璃：真实背景模糊；仅在非浏览页/非日志页显示）
             if (activeSite == null && !showLogs) {
                 GlassTabBar(
                     current = tab,
                     onTab = { tab = it },
+                    hazeState = hazeState,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = 40.dp, end = 40.dp, bottom = 20.dp)
@@ -159,6 +167,7 @@ fun AuraApp(viewModel: AuraViewModel) {
 private fun GlassTabBar(
     current: Int,
     onTab: (Int) -> Unit,
+    hazeState: dev.chrisbanes.haze.HazeState,
     modifier: Modifier = Modifier
 ) {
     val items = listOf(
@@ -170,7 +179,7 @@ private fun GlassTabBar(
         modifier
             .fillMaxWidth()
             .height(64.dp)
-            .liquidGlass(RoundedCornerShape(22.dp))
+            .hazeGlass(hazeState, RoundedCornerShape(22.dp))
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
